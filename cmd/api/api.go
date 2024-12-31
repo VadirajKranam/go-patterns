@@ -7,15 +7,26 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/vadiraj/gopher/internal/store"
 )
 
 type application struct{
 	config config
+	store  store.Storage
 }
 
 type config struct{
 	addr string
+	db dbConfig
 }
+
+type dbConfig  struct{
+	addr string
+	maxOpenConnns int
+	maxIdleConns int
+	maxIdleTime string
+}
+
 func (app *application) mount() http.Handler{
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
