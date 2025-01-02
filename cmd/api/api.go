@@ -13,11 +13,13 @@ import (
 type application struct{
 	config config
 	store  store.Storage
+	
 }
 
 type config struct{
 	addr string
 	db dbConfig
+	env string
 }
 
 type dbConfig  struct{
