@@ -19,7 +19,7 @@ func readJson(w http.ResponseWriter,r *http.Request,data any) error{
 	return decoder.Decode(data)
 }
 
-func writeJSONError(w http.ResponseWriter,r *http.Request,status int,message string) error{
+func writeJSONError(w http.ResponseWriter,_ *http.Request,status int,message string) error{
 	type envelope struct{
 		Error string `json:"error"`
 	}
