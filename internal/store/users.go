@@ -11,10 +11,10 @@ type User struct{
 	Password string `json:"-"`
 	CreatedAt string `json:"created_at"`
 }
-type UsersStore struct{
+type UserStore struct{
 	db *sql.DB
 }
-func (s *UsersStore) Create(ctx context.Context,user *User) error{
+func (s *UserStore) Create(ctx context.Context,user *User) error{
 	query:=`
 	INSERT INTO users(username,email,password)
 	VALUES($1,$2,$3) RETURNING id,created_at
