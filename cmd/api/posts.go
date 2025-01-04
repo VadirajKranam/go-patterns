@@ -19,7 +19,7 @@ type CreatePostPayload struct{
 func (app *application) createPostHandler(w http.ResponseWriter,r *http.Request){
 	var payLoad CreatePostPayload
 	if err:=readJson(w,r,&payLoad);err!=nil{
-		writeJSONError(w,r,http.StatusBadRequest,err.Error())
+		app.badRequestError(w,r,err)
 		return
 	}
 	post:=&store.Post{
@@ -31,11 +31,11 @@ func (app *application) createPostHandler(w http.ResponseWriter,r *http.Request)
 	}
 	ctx:=r.Context()
 	if err:=app.store.Posts.Create(ctx,post);err!=nil{
-		writeJSONError(w,r,http.StatusInternalServerError,err.Error())
+		app.internalServerError(w,r,err)
 		return
 	}
 	if err:=writeJson(w,http.StatusCreated,post);err!=nil{
-		writeJSONError(w,r,http.StatusInternalServerError,err.Error())
+		app.internalServerError(w,r,err)
 		return
 	}
 }
@@ -45,22 +45,22 @@ func (app *application) getPostHandler(w http.ResponseWriter,r *http.Request){
 	id,err:=strconv.ParseInt(idParam,10,64)
 	log.Printf("id: %v",id)
 	if err!=nil{
-		writeJSONError(w,r,http.StatusInternalServerError,err.Error())
+		app.internalServerError(w,r,err)
 	}
 	ctx:=r.Context()
 	post,err:=app.store.Posts.GetById(ctx,id)
 	if err!=nil{
 		switch{
 		case errors.Is(err,store.ErrorNotFound):
-			writeJSONError(w,r,http.StatusNotFound,err.Error())
+			app.notFoundError(w,r,err)
 		default:
-			writeJSONError(w,r,http.StatusInternalServerError,err.Error())
+			app.internalServerError(w,r,err)
 		}
 		
 		return
 	}
 	if err:=writeJson(w,http.StatusOK,post);err!=nil{
-		writeJSONError(w,r,http.StatusInternalServerError,err.Error())
+		app.internalServerError(w,r,err)
 		return
 	}
 }

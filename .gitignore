@@ -1,0 +1,64 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Executable binary
+/bin/
+/out/
+/dist/
+bin/
+bin
+
+# Test binary and coverage data
+*.test
+*.out
+*.cover
+
+# IDE and editor directories/files
+.vscode/
+.idea/
+*.iml
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*.bak
+*.old
+*.orig
+
+# Dependency directories (for vendored dependencies)
+vendor/
+
+# Build output
+*.o
+*.a
+
+# Caches and Go-specific files
+*.cache
+*.tmp
+*.prof
+*.trace
+*.testresult
+*.modcache
+go.sum
+!go.mod
+
+# Docker-related files
+docker-compose.override.yml
+
+# Environment files
+.env
+.env.*
+
+# Files related to debugging
+*.debug
+
+# Golang tools specific
+_debug/
+.golangci.yml
+
+# Temporary Go run output
+*.tmp/
