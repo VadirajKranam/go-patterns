@@ -22,11 +22,11 @@ func main(){
 		env: env.GetString("ENV","development"),
 	}
 	db,err:=db.New(cfg.db.addr, cfg.db.maxOpenConnns,cfg.db.maxIdleConns,cfg.db.maxIdleTime)
-	defer db.Close()
 	log.Printf("Database connection pool established")
 	if err!=nil{
 		log.Panic(err)
 	}
+	defer db.Close()
 	store:=store.NewStorage(db)
 	app:=&application{
 		config: cfg,

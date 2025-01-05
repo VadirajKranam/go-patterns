@@ -3,12 +3,14 @@ package db
 import (
 	"context"
 	"database/sql"
+	"log"
 	"time"
 )
 
 func New(addr string, maxOpenConns, maxIdleConns int, maxIdleTime string) (*sql.DB, error) {
 	db, err := sql.Open("postgres", addr)
 	if err != nil {
+		log.Fatal("error: ",err)
 		return nil, err
 	}
 	db.SetMaxOpenConns(maxOpenConns)
