@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"log"
 )
 type User struct{
 	ID int64 `json:"id"`
@@ -26,4 +28,25 @@ func (s *UserStore) Create(ctx context.Context,user *User) error{
 		return err
 	}
 	return nil
+}
+
+func (s *UserStore) GetById(ctx context.Context,id int64) (*User,error){
+	query:=`
+	SELECT id,username,email,created_at
+	FROM users WHERE id=$1
+	`
+	var user User
+	ctx,cancel:=context.WithTimeout(ctx,QueryTimeoutDuration)
+	defer cancel()
+	err:=s.db.QueryRowContext(ctx,query,id).Scan(&user.ID,&user.UserName,&user.Email,&user.CreatedAt)
+	if err!=nil{
+		switch {
+		case	errors.Is(err,sql.ErrNoRows):
+			return nil,ErrorNotFound
+		default:
+			return nil,err
+		}
+	}
+	log.Printf("User: %v",user)
+	return &user,err
 }
