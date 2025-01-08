@@ -15,6 +15,14 @@ type userKey string
 
 const userCtx userKey="user" 
 
+//	GetUser godoc
+
+//	@Summary//	@Success																																																																																																																																																																																																																		200										{string}	string		"ok"
+//	@failure	400				{string}	string		"error"
+//	@response	default			{string}	string		"other error"
+//	@Header		200				{string}	Location	"/entity/1"
+//	@Header		200,400,default	{string}	Token		"token"
+//	@Header		all				{string}	Token2		"token2"
 func (app *application) getUserHandler(w http.ResponseWriter,r *http.Request){
 	user:=getUserFromCtx(r)
 	if err:=app.jsonResponse(w,http.StatusOK,user);err!=nil{
