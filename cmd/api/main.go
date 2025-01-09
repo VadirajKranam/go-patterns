@@ -1,11 +1,10 @@
 package main
 
 import (
-	"log"
-
 	"github.com/vadiraj/gopher/internal/db"
 	"github.com/vadiraj/gopher/internal/env"
 	"github.com/vadiraj/gopher/internal/store"
+	"go.uber.org/zap"
 )
 
 const version="0.0.1"
@@ -39,18 +38,23 @@ func main(){
 		},
 		env: env.GetString("ENV","development"),
 	}
+	//logger 
+	logger:=zap.Must(zap.NewProduction()).Sugar()
+	//database
 	db,err:=db.New(cfg.db.addr, cfg.db.maxOpenConnns,cfg.db.maxIdleConns,cfg.db.maxIdleTime)
-	log.Printf("Database connection pool established")
+	logger.Info("Database connection pool established")
 	if err!=nil{
-		log.Panic(err)
+		logger.Fatal(err)
 	}
 	defer db.Close()
 	store:=store.NewStorage(db)
 	app:=&application{
 		config: cfg,
 		store: store,
+		logger:logger,
+
 	}
 	mux:=app.mount()
-	log.Fatal(app.run(mux))
+	logger.Fatal(app.run(mux))
 }
  
