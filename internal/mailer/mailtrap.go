@@ -3,8 +3,10 @@ package mailer
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"html/template"
 	"log"
+	"time"
 
 	gomail "gopkg.in/mail.v2"
 )
@@ -52,14 +54,23 @@ func (m *mailTrapClient) Send(templateFile,username,email string,data any,isSand
 	if err!=nil{
 		return -1,err
 	}
+	var retryError error
+	for i:=0;i<maxRetries;i++{
 	message:=gomail.NewMessage()
 	message.SetHeader("From",m.fromEmail)
 	message.SetHeader("To",email)
 	message.SetHeader("Subject",subject.String())
 	message.AddAlternative("text/html",body.String())
 	dialer:=gomail.NewDialer("smtp.mailosaur.net",587,m.username,m.password)
-	if err=dialer.DialAndSend(message);err!=nil{
-		return -1,err
+	if retryError=dialer.DialAndSend(message);retryError!=nil{
+		log.Printf("Failed to send email to %v, attempt %d of %d",email,i+1,maxRetries)
+			log.Printf("Error %v",retryError.Error())
+			//exponential backoff
+			time.Sleep(time.Second*time.Duration(i+1))
+			continue
 	}
-	return 200,nil	
+	log.Printf("Email sent with status code: %v",200)
+		return 200,nil
+	}	
+	return 500,fmt.Errorf("failed to send email after the %d attempts,error: %v",maxRetries,retryError)
 }
