@@ -1,10 +1,12 @@
 package main
 
 import (
+	"log"
 	"time"
 
 	"github.com/vadiraj/gopher/internal/db"
 	"github.com/vadiraj/gopher/internal/env"
+	"github.com/vadiraj/gopher/internal/mailer"
 	"github.com/vadiraj/gopher/internal/store"
 	"go.uber.org/zap"
 )
@@ -32,6 +34,7 @@ func main(){
 	cfg:=config{
 		addr: env.GetString("ADDR", ":8080"),
 		apiURL: env.GetString("EXTERNAL_URL","localhost:8080"),
+		frontendUrl: env.GetString("FRONTEND_URL","localhost:4000"),
 		db: dbConfig{
 			addr: env.GetString("DB_ADDR", "postgres://admin:admin@localhost/socialnetwork?sslmode=disable"),
 			maxOpenConnns:  env.GetInt("DB_MAX_OPEN_CONNS", 30),
@@ -41,6 +44,13 @@ func main(){
 		env: env.GetString("ENV","development"),
 		mail: mailConfig{
 			exp: time.Hour*24*3,//3 days
+			fromEmail: env.GetString("FROM_EMAIL",""),
+			sendGrid: sendGridConfig{
+				apiKey: env.GetString("SENDGRID_API_KEY",""),
+			},
+			mailTrap:mailTrapConfig{
+				apiKey: env.GetString("MAILTRAP_API_KEY",""),
+			},
 		},
 	}
 	//logger 
@@ -53,11 +63,17 @@ func main(){
 	}
 	defer db.Close()
 	store:=store.NewStorage(db)
+	//mailer:=mailer.NewSendGrid(cfg.mail.sendGrid.apiKey,cfg.mail.fromEmail)
+	logger.Infof("apikey: %s",cfg.mail.mailTrap.apiKey)
+	mailer,err:=mailer.NewMailTrap(cfg.mail.mailTrap.apiKey,cfg.mail.fromEmail)
+	if err!=nil{
+		log.Fatal(err)
+	}
 	app:=&application{
 		config: cfg,
 		store: store,
 		logger:logger,
-
+		mailer: mailer,
 	}
 	mux:=app.mount()
 	logger.Fatal(app.run(mux))

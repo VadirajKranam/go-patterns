@@ -28,6 +28,8 @@ type Storage struct{
 		GetById(context.Context,int64) (*User,error)
 		CreateAndInvite(ctx context.Context, user *User,token string,invitationExp time.Duration) error
 		createUserInvitation(ctx context.Context,tx *sql.Tx,token string,invitationExp time.Duration,userId int64) error
+		Activate(context.Context,string) error
+		Delete(ctx context.Context,userId int64) error
 	}
 	Comments interface{
 		GetByPostID(context.Context,int64) ([]Comment,error)

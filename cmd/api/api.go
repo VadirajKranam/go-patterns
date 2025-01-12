@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/vadiraj/gopher/docs" //generate swagger doc
+	"github.com/vadiraj/gopher/internal/mailer"
 	"github.com/vadiraj/gopher/internal/store"
 	"go.uber.org/zap"
 )
@@ -17,11 +18,22 @@ type application struct{
 	config config
 	store  store.Storage
 	logger *zap.SugaredLogger
-	
+	mailer mailer.Client
 }
 
 type mailConfig struct{
+	sendGrid sendGridConfig
 	exp time.Duration
+	fromEmail string
+	mailTrap mailTrapConfig
+}
+
+type sendGridConfig struct{
+	apiKey string
+}
+
+type mailTrapConfig struct{
+	apiKey string
 }
 
 type config struct{
@@ -30,6 +42,7 @@ type config struct{
 	env string
 	apiURL string
 	mail mailConfig
+	frontendUrl string	
 }
 
 type dbConfig  struct{
@@ -61,6 +74,7 @@ func (app *application) mount() http.Handler{
 			})
 		})
 		r.Route("/users",func(r chi.Router){
+			r.Put("/activate/{token}",app.activateUserHandler)
 			r.Route("/{userId}",func(r chi.Router){
 				r.Use(app.userContextMiddleware)
 				r.Get("/",app.getUserHandler)
