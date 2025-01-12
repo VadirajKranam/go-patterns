@@ -49,7 +49,8 @@ func main(){
 				apiKey: env.GetString("SENDGRID_API_KEY",""),
 			},
 			mailTrap:mailTrapConfig{
-				apiKey: env.GetString("MAILTRAP_API_KEY",""),
+				username: env.GetString("MAILTRAP_USERNAME",""),
+				password: env.GetString("MAILTRAP_PASSWORD",""),
 			},
 		},
 	}
@@ -64,8 +65,7 @@ func main(){
 	defer db.Close()
 	store:=store.NewStorage(db)
 	//mailer:=mailer.NewSendGrid(cfg.mail.sendGrid.apiKey,cfg.mail.fromEmail)
-	logger.Infof("apikey: %s",cfg.mail.mailTrap.apiKey)
-	mailer,err:=mailer.NewMailTrap(cfg.mail.mailTrap.apiKey,cfg.mail.fromEmail)
+	mailer,err:=mailer.NewMailTrap(cfg.mail.mailTrap.username,cfg.mail.mailTrap.password,cfg.mail.fromEmail)
 	if err!=nil{
 		log.Fatal(err)
 	}

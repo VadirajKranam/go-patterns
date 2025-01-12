@@ -33,7 +33,8 @@ type sendGridConfig struct{
 }
 
 type mailTrapConfig struct{
-	apiKey string
+	username string
+	password string
 }
 
 type config struct{

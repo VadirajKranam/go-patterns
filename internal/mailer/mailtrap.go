@@ -12,16 +12,21 @@ import (
 
 type mailTrapClient struct{
 	fromEmail string
-	apiKey string
+	username string
+	password string
 }
 
-func NewMailTrap(apiKey,fromEmail string) (*mailTrapClient,error){
-	if apiKey==""{
-		return &mailTrapClient{},errors.New("api key is required")
+func NewMailTrap(username,password,fromEmail string) (*mailTrapClient,error){
+	if username==""{
+		return &mailTrapClient{},errors.New("username is required")
+	}
+	if password==""{
+		return &mailTrapClient{},errors.New("password is required")
 	}
 	return &mailTrapClient{
 		fromEmail: fromEmail,
-		apiKey: apiKey,
+		username: username,
+		password: password,
 	},nil
 }
 
@@ -52,7 +57,7 @@ func (m *mailTrapClient) Send(templateFile,username,email string,data any,isSand
 	message.SetHeader("To",email)
 	message.SetHeader("Subject",subject.String())
 	message.AddAlternative("text/html",body.String())
-	dialer:=gomail.NewDialer("live.smtp.mailtrap.io",587,"api",m.apiKey)
+	dialer:=gomail.NewDialer("smtp.mailosaur.net",587,m.username,m.password)
 	if err=dialer.DialAndSend(message);err!=nil{
 		return -1,err
 	}
