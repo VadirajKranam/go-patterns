@@ -30,6 +30,7 @@ type Storage struct{
 		createUserInvitation(ctx context.Context,tx *sql.Tx,token string,invitationExp time.Duration,userId int64) error
 		Activate(context.Context,string) error
 		Delete(ctx context.Context,userId int64) error
+		GetByEmail(ctx context.Context,email string) (*User,error)
 	}
 	Comments interface{
 		GetByPostID(context.Context,int64) ([]Comment,error)

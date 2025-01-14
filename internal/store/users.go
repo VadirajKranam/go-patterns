@@ -61,13 +61,13 @@ func (s *UserStore) Create(ctx context.Context,tx *sql.Tx,user *User) error{
 
 func (s *UserStore) GetById(ctx context.Context,id int64) (*User,error){
 	query:=`
-	SELECT id,username,email,created_at
-	FROM users WHERE id=$1
+	SELECT id,username,password,email,created_at
+	FROM users WHERE id=$1 AND is_active=true
 	`
 	var user User
 	ctx,cancel:=context.WithTimeout(ctx,QueryTimeoutDuration)
 	defer cancel()
-	err:=s.db.QueryRowContext(ctx,query,id).Scan(&user.ID,&user.UserName,&user.Email,&user.CreatedAt)
+	err:=s.db.QueryRowContext(ctx,query,id).Scan(&user.ID,&user.UserName,&user.Password.hash,&user.Email,&user.CreatedAt)
 	if err!=nil{
 		switch {
 		case	errors.Is(err,sql.ErrNoRows):
@@ -127,6 +127,27 @@ func (s *UserStore) Delete(ctx context.Context,userId int64) error{
 		}
 		return nil
 	})
+}
+
+func (s *UserStore) GetByEmail(ctx context.Context,email string) (*User,error){
+	query:=`
+	SELECT id,username,password,email,created_at
+	FROM users WHERE email=$1 AND is_active=true
+	`
+	var user User
+	ctx,cancel:=context.WithTimeout(ctx,QueryTimeoutDuration)
+	defer cancel()
+	err:=s.db.QueryRowContext(ctx,query,email).Scan(&user.ID,&user.UserName,&user.Password.hash,&user.Email,&user.CreatedAt)
+	if err!=nil{
+		switch {
+		case	errors.Is(err,sql.ErrNoRows):
+			return nil,ErrorNotFound
+		default:
+			return nil,err
+		}
+	}
+	log.Printf("User: %v",user)
+	return &user,err
 }
 
 func (s *UserStore) getUserFromInvitation(ctx context.Context,tx *sql.Tx,token string) (*User,error){

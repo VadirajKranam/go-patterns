@@ -36,12 +36,13 @@ func (app *application) createPostHandler(w http.ResponseWriter,r *http.Request)
 		app.badRequestError(w,r,err)
 		return 
 	}
+	user:=getUserFromCtx(r)
 	post:=&store.Post{
 		Title: payLoad.Title,
 		Content: payLoad.Content,
 		Tags: payLoad.Tags,
 		//todo change after auth
-		UserID: 1,
+		UserID: user.ID,
 	}
 	ctx:=r.Context()
 	if err:=app.store.Posts.Create(ctx,post);err!=nil{

@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/vadiraj/gopher/docs" //generate swagger doc
+	"github.com/vadiraj/gopher/internal/auth"
 	"github.com/vadiraj/gopher/internal/mailer"
 	"github.com/vadiraj/gopher/internal/store"
 	"go.uber.org/zap"
@@ -19,6 +20,7 @@ type application struct{
 	store  store.Storage
 	logger *zap.SugaredLogger
 	mailer mailer.Client
+	authenticator auth.Authenticator
 }
 
 type mailConfig struct{
@@ -37,9 +39,17 @@ type mailTrapConfig struct{
 	password string
 }
 
+type tokenConfig struct{
+	secret string
+	exp time.Duration
+	iss string
+}
+
 type authConfig struct{
 	basic basicConfig
+	token tokenConfig
 }
+
 
 type basicConfig struct{
 	user string
@@ -71,10 +81,11 @@ func (app *application) mount() http.Handler{
 	r.Use(middleware.Logger)
 	r.Use(middleware.Timeout(60*time.Second))
 	r.Route("/v1",func(r chi.Router){
-		r.With(app.BasicAuthMiddleware()).Get("/health", app.healthCheckHandler)
+		r.With(app.BasicAuthMiddleware).Get("/health", app.healthCheckHandler)
 		docsUrl:=fmt.Sprintf("%s/swagger/doc.json",app.config.addr)
 		r.Get("/swagger/*",httpSwagger.Handler(httpSwagger.URL(docsUrl)))
 		r.Route("/posts",func(r chi.Router){
+			r.Use(app.AuthTokenMiddleware)
 			r.Post("/",app.createPostHandler)
 			r.Route("/{postId}",func(r chi.Router){
 				r.Use(app.postsContextMiddleware)
@@ -87,18 +98,20 @@ func (app *application) mount() http.Handler{
 		r.Route("/users",func(r chi.Router){
 			r.Put("/activate/{token}",app.activateUserHandler)
 			r.Route("/{userId}",func(r chi.Router){
-				r.Use(app.userContextMiddleware)
+				r.Use(app.AuthTokenMiddleware)
 				r.Get("/",app.getUserHandler)
 				r.Put("/follow",app.followUserHandler)
 				r.Put("/unfollow",app.unfollowUserHandler)
 			})
 			r.Group(func (r chi.Router)  {
+				r.Use(app.AuthTokenMiddleware)
 				r.Get("/feed",app.getUserFeedHandler)
 			})
 		})
 		//Public routes
-		r.Route("/authentication",func(r chi.Router){
+		r.With(app.BasicAuthMiddleware).Route("/authentication",func(r chi.Router){
 			r.Post("/user",app.registerUserHandler)
+			r.Post("/token",app.createTokenHandler)
 		})
 	})
 
