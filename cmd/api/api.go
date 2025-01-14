@@ -37,13 +37,23 @@ type mailTrapConfig struct{
 	password string
 }
 
+type authConfig struct{
+	basic basicConfig
+}
+
+type basicConfig struct{
+	user string
+	pass string
+}
+
 type config struct{
 	addr string
 	db dbConfig
 	env string
 	apiURL string
 	mail mailConfig
-	frontendUrl string	
+	frontendUrl string
+	auth authConfig
 }
 
 type dbConfig  struct{
@@ -61,7 +71,7 @@ func (app *application) mount() http.Handler{
 	r.Use(middleware.Logger)
 	r.Use(middleware.Timeout(60*time.Second))
 	r.Route("/v1",func(r chi.Router){
-		r.Get("/health", app.healthCheckHandler)
+		r.With(app.BasicAuthMiddleware()).Get("/health", app.healthCheckHandler)
 		docsUrl:=fmt.Sprintf("%s/swagger/doc.json",app.config.addr)
 		r.Get("/swagger/*",httpSwagger.Handler(httpSwagger.URL(docsUrl)))
 		r.Route("/posts",func(r chi.Router){
