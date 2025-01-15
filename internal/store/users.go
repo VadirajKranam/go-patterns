@@ -18,6 +18,8 @@ type User struct{
 	Password password `json:"-"`
 	CreatedAt string `json:"created_at"`
 	IsActive bool `json:"is_active"`
+	RoleID int64 `json:"role_id"`
+	Role Role `json:"role"`
 }
 
 type password struct{
@@ -44,12 +46,12 @@ type UserStore struct{
 }
 func (s *UserStore) Create(ctx context.Context,tx *sql.Tx,user *User) error{
 	query:=`
-	INSERT INTO users(username,email,password)
-	VALUES($1,$2,$3) RETURNING id,created_at
+	INSERT INTO users(username,email,password,role_id)
+	VALUES($1,$2,$3,$4) RETURNING id,created_at
 	`
 	ctx,cancel:=context.WithTimeout(ctx,QueryTimeoutDuration)
 	defer cancel()
-	err:=s.db.QueryRowContext(ctx, query,user.UserName,user.Email,user.Password.hash).Scan(&user.ID,&user.CreatedAt)
+	err:=s.db.QueryRowContext(ctx, query,user.UserName,user.Email,user.Password.hash,user.RoleID).Scan(&user.ID,&user.CreatedAt)
 	if err!=nil{
 		switch {
 		case err.Error()==`pq: duplicate key value violates unique constraint "users_email_key"`:
@@ -65,13 +67,14 @@ func (s *UserStore) Create(ctx context.Context,tx *sql.Tx,user *User) error{
 
 func (s *UserStore) GetById(ctx context.Context,id int64) (*User,error){
 	query:=`
-	SELECT id,username,password,email,created_at
-	FROM users WHERE id=$1 AND is_active=true
+	SELECT users.id,users.username,users.password,users.email,users.created_at,roles.*
+	JOIN roles ON (users.role_id=roles.id)
+	FROM users WHERE users.id=$1 AND users.is_active=true
 	`
 	var user User
 	ctx,cancel:=context.WithTimeout(ctx,QueryTimeoutDuration)
 	defer cancel()
-	err:=s.db.QueryRowContext(ctx,query,id).Scan(&user.ID,&user.UserName,&user.Password.hash,&user.Email,&user.CreatedAt)
+	err:=s.db.QueryRowContext(ctx,query,id).Scan(&user.ID,&user.UserName,&user.Password.hash,&user.Email,&user.CreatedAt,&user.Role.Id,&user.Role.Name,&user.Role.Level,&user.Role.Description)
 	if err!=nil{
 		switch {
 		case	errors.Is(err,sql.ErrNoRows):
