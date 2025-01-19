@@ -124,7 +124,6 @@ func (app *application) getUser(ctx context.Context,userId int64) (*store.User,e
 		return nil,err
 	}
 	if user==nil{
-		
 	user,err=app.store.Users.GetById(ctx,userId)
 		if err!=nil{
 			return nil,err
