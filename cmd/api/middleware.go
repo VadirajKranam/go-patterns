@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -119,6 +120,7 @@ func (app *application) getUser(ctx context.Context,userId int64) (*store.User,e
 		}
 		return user,nil
 	}
+	log.Print("inside get user")
 	user,err:=app.cacheStorage.Users.Get(ctx,userId)
 	if err!=nil{
 		return nil,err

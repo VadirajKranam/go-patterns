@@ -21,7 +21,9 @@ func (m *MockUserStore) Create(ctx context.Context,tx *sql.Tx,user *User) error{
 }
 
 func (m *MockUserStore) GetById(ctx context.Context,userId int64) (*User,error){
-	return &User{},nil
+	return &User{
+		ID: userId,
+	},nil
 }
 
 func (m *MockUserStore) CreateAndInvite(ctx context.Context, user *User,token string,invitationExp time.Duration) error{
