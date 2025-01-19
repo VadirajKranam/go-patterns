@@ -72,8 +72,10 @@ func (s *UserStore) Create(ctx context.Context,tx *sql.Tx,user *User) error{
 func (s *UserStore) GetById(ctx context.Context,id int64) (*User,error){
 	query:=`
 	SELECT users.id,users.username,users.password,users.email,users.created_at,roles.*
+	FROM users 
 	JOIN roles ON (users.role_id=roles.id)
-	FROM users WHERE users.id=$1 AND users.is_active=true
+	WHERE
+	users.id=$1 AND users.is_active=true
 	`
 	var user User
 	ctx,cancel:=context.WithTimeout(ctx,QueryTimeoutDuration)
