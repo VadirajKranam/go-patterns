@@ -6,39 +6,39 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type JWTAuthenticator struct{
+type JWTAuthenticator struct {
 	secret string
-	aud string
-	iss string
+	aud    string
+	iss    string
 }
 
-func NewJWTAuthenticator(secret,aud,iss string) *JWTAuthenticator{
+func NewJWTAuthenticator(secret, aud, iss string) *JWTAuthenticator {
 	return &JWTAuthenticator{
 		secret: secret,
-		aud: aud,
-		iss: iss,
+		aud:    aud,
+		iss:    iss,
 	}
 }
 
-func (j *JWTAuthenticator) GenerateToken(claims jwt.Claims) (string,error){
-	token:=jwt.NewWithClaims(jwt.SigningMethodHS256,claims)
-	tokenString,err:=token.SignedString([]byte(j.secret))
-	if err!=nil{
-		return "",err
+func (j *JWTAuthenticator) GenerateToken(claims jwt.Claims) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(j.secret))
+	if err != nil {
+		return "", err
 	}
-	return tokenString,nil
+	return tokenString, nil
 }
 
-func (j *JWTAuthenticator) ValidateToken(token string) (*jwt.Token,error){
-	return jwt.Parse(token,func(t *jwt.Token) (any,error){
-		if _,ok:=t.Method.(*jwt.SigningMethodHMAC);!ok{
-			return nil,fmt.Errorf("unexpectd signing method %v",t.Header["alg"])
+func (j *JWTAuthenticator) ValidateToken(token string) (*jwt.Token, error) {
+	return jwt.Parse(token, func(t *jwt.Token) (any, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpectd signing method %v", t.Header["alg"])
 		}
-		return	[]byte(j.secret),nil
+		return []byte(j.secret), nil
 	},
-	jwt.WithExpirationRequired(),
-	jwt.WithAudience(j.aud),
-	jwt.WithIssuer(j.aud),
-	jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}),
-)
+		jwt.WithExpirationRequired(),
+		jwt.WithAudience(j.aud),
+		jwt.WithIssuer(j.aud),
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}),
+	)
 }

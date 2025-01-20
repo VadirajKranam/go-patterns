@@ -1,8 +1,13 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -16,129 +21,149 @@ import (
 	"go.uber.org/zap"
 )
 
-type application struct{
-	config config
-	store  store.Storage
-	logger *zap.SugaredLogger
-	mailer mailer.Client
+type application struct {
+	config        config
+	store         store.Storage
+	logger        *zap.SugaredLogger
+	mailer        mailer.Client
 	authenticator auth.Authenticator
-	cacheStorage cache.Storage
+	cacheStorage  cache.Storage
 }
 
-type mailConfig struct{
-	sendGrid sendGridConfig
-	exp time.Duration
+type mailConfig struct {
+	sendGrid  sendGridConfig
+	exp       time.Duration
 	fromEmail string
-	mailTrap mailTrapConfig
+	mailTrap  mailTrapConfig
 }
 
-type sendGridConfig struct{
+type sendGridConfig struct {
 	apiKey string
 }
 
-type mailTrapConfig struct{
+type mailTrapConfig struct {
 	username string
 	password string
 }
 
-type tokenConfig struct{
+type tokenConfig struct {
 	secret string
-	exp time.Duration
-	iss string
+	exp    time.Duration
+	iss    string
 }
 
-type authConfig struct{
+type authConfig struct {
 	basic basicConfig
 	token tokenConfig
 }
 
-
-type basicConfig struct{
+type basicConfig struct {
 	user string
 	pass string
 }
 
-type config struct{
-	addr string
-	db dbConfig
-	env string
-	apiURL string
-	mail mailConfig
+type config struct {
+	addr        string
+	db          dbConfig
+	env         string
+	apiURL      string
+	mail        mailConfig
 	frontendUrl string
-	auth authConfig
-	redisCfg redisConfig
+	auth        authConfig
+	redisCfg    redisConfig
 }
 
-type redisConfig struct{
-	addr string
-	pw string
-	db int
+type redisConfig struct {
+	addr    string
+	pw      string
+	db      int
 	enabled bool
 }
 
-type dbConfig  struct{
-	addr string
+type dbConfig struct {
+	addr          string
 	maxOpenConnns int
-	maxIdleConns int
-	maxIdleTime string
+	maxIdleConns  int
+	maxIdleTime   string
 }
 
-func (app *application) mount() http.Handler{
+func (app *application) mount() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Logger)
-	r.Use(middleware.Timeout(60*time.Second))
-	r.Route("/v1",func(r chi.Router){
-		r.With(app.BasicAuthMiddleware).Get("/health", app.healthCheckHandler)
-		docsUrl:=fmt.Sprintf("%s/swagger/doc.json",app.config.addr)
-		r.Get("/swagger/*",httpSwagger.Handler(httpSwagger.URL(docsUrl)))
-		r.Route("/posts",func(r chi.Router){
+	r.Use(middleware.Timeout(60 * time.Second))
+	r.Route("/v1", func(r chi.Router) {
+		r.Get("/health", app.healthCheckHandler)
+		docsUrl := fmt.Sprintf("%s/swagger/doc.json", app.config.addr)
+		r.Get("/swagger/*", httpSwagger.Handler(httpSwagger.URL(docsUrl)))
+		r.Route("/posts", func(r chi.Router) {
 			r.Use(app.AuthTokenMiddleware)
-			r.Post("/",app.createPostHandler)
-			r.Route("/{postId}",func(r chi.Router){
+			r.Post("/", app.createPostHandler)
+			r.Route("/{postId}", func(r chi.Router) {
 				r.Use(app.postsContextMiddleware)
-				r.Get("/",app.getPostHandler)
-				r.Patch("/",app.CheckPostOwnership("moderator",app.updatePostHandler))
-				r.Delete("/",app.CheckPostOwnership("admin",app.deletePostHandler))
-				r.Post("/comment",app.addCommentHandler)
+				r.Get("/", app.getPostHandler)
+				r.Patch("/", app.CheckPostOwnership("moderator", app.updatePostHandler))
+				r.Delete("/", app.CheckPostOwnership("admin", app.deletePostHandler))
+				r.Post("/comment", app.addCommentHandler)
 			})
 		})
-		r.Route("/users",func(r chi.Router){
-			r.Put("/activate/{token}",app.activateUserHandler)
-			r.Route("/{userId}",func(r chi.Router){
+		r.Route("/users", func(r chi.Router) {
+			r.Put("/activate/{token}", app.activateUserHandler)
+			r.Route("/{userId}", func(r chi.Router) {
 				r.Use(app.AuthTokenMiddleware)
-				r.Get("/",app.getUserHandler)
-				r.Put("/follow",app.followUserHandler)
-				r.Put("/unfollow",app.unfollowUserHandler)
+				r.Get("/", app.getUserHandler)
+				r.Put("/follow", app.followUserHandler)
+				r.Put("/unfollow", app.unfollowUserHandler)
 			})
-			r.Group(func (r chi.Router)  {
+			r.Group(func(r chi.Router) {
 				r.Use(app.AuthTokenMiddleware)
-				r.Get("/feed",app.getUserFeedHandler)
+				r.Get("/feed", app.getUserFeedHandler)
 			})
 		})
 		//Public routes
-		r.Route("/authentication",func(r chi.Router){
-			r.Post("/user",app.registerUserHandler)
-			r.Post("/token",app.createTokenHandler)
+		r.Route("/authentication", func(r chi.Router) {
+			r.Post("/user", app.registerUserHandler)
+			r.Post("/token", app.createTokenHandler)
 		})
 	})
 
 	return r
 }
-func (app *application) run(mux http.Handler) error{
-	docs.SwaggerInfo.Version=version
-	docs.SwaggerInfo.Host=app.config.apiURL
-	docs.SwaggerInfo.BasePath="/v1"
+func (app *application) run(mux http.Handler) error {
+	docs.SwaggerInfo.Version = version
+	docs.SwaggerInfo.Host = app.config.apiURL
+	docs.SwaggerInfo.BasePath = "/v1"
 
-	srv:=&http.Server{
-		Addr: app.config.addr,
-		Handler: mux,
-		WriteTimeout: time.Second*30,
-		ReadTimeout: time.Second*10,
-		IdleTimeout: time.Minute,
+	srv := &http.Server{
+		Addr:         app.config.addr,
+		Handler:      mux,
+		WriteTimeout: time.Second * 30,
+		ReadTimeout:  time.Second * 10,
+		IdleTimeout:  time.Minute,
 	}
-	app.logger.Infow("server has started at",app.config.addr ,"env: ",app.config.env)
-	return srv.ListenAndServe()
+	shutdown := make(chan error)
+	go func() {
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+		s := <-quit
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		app.logger.Info("signal caught: ", s.String())
+		shutdown <- srv.Shutdown(ctx)
+	}()
+	app.logger.Infow("server has started at", app.config.addr, "env: ", app.config.env)
+	err := srv.ListenAndServe()
+	if err != nil {
+		if !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+	}
+	err = <-shutdown
+	if err != nil {
+		return err
+	}
+	app.logger.Infow("server has stopped", "addr", app.config.addr, "env", app.config.env)
+	return nil
 }

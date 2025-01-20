@@ -28,9 +28,9 @@ const userCtx userKey = "user"
 // @Failure      500  {object}  httputil.HTTPError
 // @Router       /user/{id} [get]
 func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
-	userID,err:=strconv.ParseInt(chi.URLParam(r,"userId"),10,64)
-	if err!=nil{
-		app.badRequestError(w,r,err)
+	userID, err := strconv.ParseInt(chi.URLParam(r, "userId"), 10, 64)
+	if err != nil {
+		app.badRequestError(w, r, err)
 		return
 	}
 	user, err := app.getUser(r.Context(), userID)
@@ -49,13 +49,11 @@ func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
-
 func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request) {
 	followerUser := getUserFromCtx(r)
-	followedID,err:=strconv.ParseInt(chi.URLParam(r,"userID"),10,64)
-	if err!=nil{
-		app.badRequestError(w,r,err)
+	followedID, err := strconv.ParseInt(chi.URLParam(r, "userID"), 10, 64)
+	if err != nil {
+		app.badRequestError(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -78,9 +76,9 @@ func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request
 
 func (app *application) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {
 	followerUser := getUserFromCtx(r)
-	unFollowedID,err:=strconv.ParseInt(chi.URLParam(r,"userID"),10,64)
-	if err!=nil{
-		app.badRequestError(w,r,err)
+	unFollowedID, err := strconv.ParseInt(chi.URLParam(r, "userID"), 10, 64)
+	if err != nil {
+		app.badRequestError(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -96,20 +94,20 @@ func (app *application) unfollowUserHandler(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-func(app *application) activateUserHandler(w http.ResponseWriter,r *http.Request){
-	token:=chi.URLParam(r,"token")
-	err:=app.store.Users.Activate(r.Context(),token)
-	if err!=nil{
-		switch err{
+func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
+	token := chi.URLParam(r, "token")
+	err := app.store.Users.Activate(r.Context(), token)
+	if err != nil {
+		switch err {
 		case store.ErrorNotFound:
-			app.notFoundError(w,r,err)
+			app.notFoundError(w, r, err)
 		default:
-			app.internalServerError(w,r,err)
+			app.internalServerError(w, r, err)
 		}
 		return
 	}
-	if err:=app.jsonResponse(w,http.StatusNoContent,"");err!=nil{
-		app.internalServerError(w,r,err)
+	if err := app.jsonResponse(w, http.StatusNoContent, ""); err != nil {
+		app.internalServerError(w, r, err)
 		return
 	}
 }
